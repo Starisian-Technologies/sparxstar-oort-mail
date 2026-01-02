@@ -8,41 +8,44 @@ on:
 jobs:
   build-release:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
-    
+
     env:
-      PLUGIN_SLUG: sparxstar-oort-mail
-    
+      PLUGIN_SLUG: sparxstar-sendgrid-mail-runtime
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Extract version from tag
         id: version
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
+
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
+          php-version: '8.2'
           tools: composer
-      
-      - name: Install Composer dependencies
-        run: composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
-      
+
+      - name: Install Composer dependencies (if present)
+        run: |
+          if [ -f composer.json ]; then
+            composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
+          else
+            echo "No composer.json found — skipping Composer install"
+          fi
+
       - name: Prepare release directory
         run: |
           RELEASE_DIR="${PLUGIN_SLUG}"
-          
-          # Create a clean release directory
+
           mkdir -p "${RELEASE_DIR}"
-          
-          # Copy all files except excluded ones
+
           rsync -av \
             --exclude='.git' \
             --exclude='.github' \
@@ -50,64 +53,42 @@ jobs:
             --exclude='docs' \
             --exclude='.gitignore' \
             --exclude='.gitattributes' \
-            --exclude='phpunit.xml' \
-            --exclude='phpunit.xml.dist' \
-            --exclude='phpcs.xml' \
-            --exclude='phpcs.xml.dist' \
+            --exclude='phpunit.xml*' \
+            --exclude='phpcs.xml*' \
             --exclude='.editorconfig' \
-            --exclude='composer.json' \
-            --exclude='composer.lock' \
-            --exclude='package.json' \
-            --exclude='package-lock.json' \
             --exclude='node_modules' \
+            --exclude='package*.json' \
             --exclude='webpack.config.js' \
-            --exclude='*.md' \
             --exclude="${RELEASE_DIR}" \
             ./ "${RELEASE_DIR}/"
-          
-          # Ensure vendor/ is included
-          if [ -d "vendor" ]; then
-            echo "vendor/ directory included in release"
+
+          echo "Release directory prepared"
+
+      - name: Ensure LICENSE is included
+        run: |
+          if [ -f "LICENSE" ]; then
+            cp LICENSE "${PLUGIN_SLUG}/LICENSE"
+          elif [ -f "LICENSE.txt" ]; then
+            cp LICENSE.txt "${PLUGIN_SLUG}/LICENSE"
           else
-            echo "Warning: vendor/ directory not found"
+            echo "Warning: LICENSE file not found"
           fi
-          
-          # Ensure LICENSE.txt is included
-          if [ -f "LICENSE.txt" ]; then
-            cp LICENSE.txt "${RELEASE_DIR}/"
-            echo "LICENSE.txt included in release"
-          elif [ -f "LICENSE" ]; then
-            cp LICENSE "${RELEASE_DIR}/LICENSE.txt"
-            echo "LICENSE copied as LICENSE.txt"
-          else
-            echo "Warning: LICENSE.txt not found"
-          fi
-      
+
       - name: Create release ZIP
         run: |
           ZIP_FILE="${PLUGIN_SLUG}.zip"
-          
-          # Create the ZIP file
-          cd "${PLUGIN_SLUG}" && zip -r "../${ZIP_FILE}" . -x "*.git*" && cd ..
-          
-          echo "Created ${ZIP_FILE}"
+          cd "${PLUGIN_SLUG}" && zip -r "../${ZIP_FILE}" . && cd ..
           ls -lh "${ZIP_FILE}"
-      
+
       - name: Generate SHA256 checksum
         id: checksum
         run: |
           ZIP_FILE="${PLUGIN_SLUG}.zip"
-          
-          # Generate SHA256 checksum
           sha256sum "${ZIP_FILE}" > "${ZIP_FILE}.sha256"
-          
-          # Display checksum
-          cat "${ZIP_FILE}.sha256"
-          
-          # Save checksum to output
-          CHECKSUM=$(sha256sum "${ZIP_FILE}" | awk '{print $1}')
+          CHECKSUM=$(awk '{print $1}' "${ZIP_FILE}.sha256")
           echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
-      
+          cat "${ZIP_FILE}.sha256"
+
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
@@ -116,9 +97,11 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            Release ${{ steps.version.outputs.tag }}
-            
-            **SHA256 Checksum:**
+            **SparxStar SendGrid Mail Runtime**
+
+            Infrastructure-level MU-plugin for WordPress multisite.
+
+            **SHA256 Checksum**
             ```
             ${{ steps.checksum.outputs.checksum }}
             ```
