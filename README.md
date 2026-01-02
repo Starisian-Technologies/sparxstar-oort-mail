@@ -1,216 +1,255 @@
-SPARXSTAR Oort Mail
-===================
+SPARXSTAR SendGrid Mail Runtime
+===============================
 
-**SPARXSTAR Oort Mail** is a **must-use (MU) WordPress plugin** that enforces reliable, domain-correct outbound email delivery across a WordPress multisite network using the SendGrid API.
-
-It is designed for **infrastructure-level email transport**, not per-site configuration, and is intended to load early and run consistently across the network.
+**Infrastructure-level SendGrid mail transport for WordPress multisite**
 
 * * * * *
 
-What This Plugin Is
--------------------
+Overview
+--------
 
--   A **network mail transport layer**
+**SPARXSTAR SendGrid Mail Runtime** is a **network-wide MU-plugin** that provides a deterministic, SendGrid-backed email transport layer for WordPress multisite environments.
 
--   Installed as a **MU plugin**
+It is designed as **shared infrastructure**, not a product, and is always loaded when present.
 
--   Alias-domain aware (Mercator-friendly)
-
--   API-based (SendGrid, not SMTP)
-
--   Headless (no UI, no settings pages)
-
-This plugin exists to solve **domain alignment, DKIM compliance, and delivery reliability** in multisite environments.
+This runtime safely intercepts `wp_mail()` and routes email delivery through the SendGrid API while preserving WordPress compatibility and fallback behavior.
 
 * * * * *
 
-What This Plugin Is *Not*
--------------------------
+Design Goals
+------------
 
--   Not a UI mail plugin
+-   Deterministic, network-wide email delivery
 
--   Not configurable per site
+-   No SMTP configuration
 
--   Not optional once deployed
+-   No plugin activation lifecycle
 
--   Not a replacement for `wp_mail()` calls in code
+-   Safe interception of `wp_mail()`
 
-It operates **below** application logic.
+-   Composer-optional dependency loading
+
+-   Multisite-first architecture
+
+-   Minimal surface area and predictable behavior
 
 * * * * *
 
-Installation (Required: MU Plugin)
-----------------------------------
+Key Features
+------------
 
-This plugin **must be installed as a MU plugin**.
+-   Intercepts `wp_mail()` using `pre_wp_mail` (best practice)
 
-`wp-content/mu-plugins/sparxstar-oort-mail.php`
+-   Sends mail via SendGrid REST API (no SMTP)
 
--   Do **not** install in `/wp-content/plugins/`
+-   Optional Composer autoload support
 
--   Do **not** rely on activation hooks
+-   Network admin health diagnostics
 
--   Do **not** network-activate
+-   CC-TLD-aware sender domain resolution
 
-MU placement ensures:
+-   Filterable sender identity
 
--   Early loading
+-   WP-CLI test command
 
--   Cannot be accidentally disabled
+-   Zero database writes
 
--   Consistent mail policy across the network
+-   Zero background processes
 
 * * * * *
 
 Requirements
 ------------
 
--   WordPress **6.8+**
+| Component     | Requirement            |
+|--------------|------------------------|
+| WordPress    | 6.8+                   |
+| PHP          | 8.2+                   |
+| Environment  | Multisite recommended  |
+| SendGrid API | Required               |
 
--   PHP **8.2+**
 
--   SendGrid account
+* * * * *
 
--   Verified SendGrid sending domain(s)
+Installation
+------------
 
--   `SENDGRID_API_KEY` available via environment variables
+This runtime **must be installed as an MU-plugin**.
 
--   Composer dependencies bundled at release time
+`/wp-content/mu-plugins/sparxstar-sendgrid-mail-runtime.php`
+
+No activation step is required or supported.
 
 * * * * *
 
 Configuration
 -------------
 
-### Environment Variable (Required)
+### SendGrid API Key
 
-`SENDGRID_API_KEY=your_sendgrid_api_key`
+The SendGrid API key **must** be provided via environment variable:
 
-The plugin **will not** read API keys from:
+`SENDGRID_API_KEY=your_api_key_here`
 
--   The database
-
--   wp-config constants
-
--   Admin settings
-
-This is intentional.
+This runtime does **not** support storing credentials in the database or wp-config.php by design.
 
 * * * * *
 
-How Mail Delivery Works
------------------------
+Runtime Behavior
+----------------
 
--   WordPress calls `wp_mail()`
+### Mail Interception
 
--   The plugin intercepts mail via `pre_wp_mail`
+-   Hooks into `pre_wp_mail`
 
--   Mail is sent via the SendGrid API
+-   Validates recipients, subject, and message
 
--   PHPMailer is bypassed
+-   Falls back to native WordPress mail if input is malformed
 
--   If SendGrid fails, WordPress may fall back
+-   Sends via SendGrid only when all conditions are met
 
-This is a **supported and safe interception point**.
+### Sender Resolution
 
-* * * * *
+The sender email defaults to:
 
-Sender Domain Resolution
-------------------------
+`support@{resolved-domain}`
 
-The plugin dynamically resolves the sender domain at send time using:
+Domain resolution is:
 
-1.  Alias domain (Mercator)
+-   CC-TLD aware (`.com.gm`, `.co.za`, `.co.uk`, etc.)
 
-2.  Subdomain reduction to registrable base
+-   Reduced to registrable base domain
 
-3.  ccTLD-aware handling, including:
-
-    -   `.com.gm`
-
-    -   `.org.gm`
-
-    -   `.co.za`
-
-    -   `.org.za`
-
-4.  Final fallback: `sparxstar.com`
-
-This ensures outbound mail aligns with **verified SendGrid domains**.
+-   Falls back to `sparxstar.com`
 
 * * * * *
 
-Example
+Filters
 -------
 
-If the site URL is:
+### Override From Email
 
-`https://legal.clientname.com`
+`add_filter('sparxstar_sendgrid/from_email', function ($email) {
+    return 'noreply@example.com';
+});`
 
-Outbound email will be sent as:
+### Override From Name
 
-`From: support@clientname.com`
-
-If the site URL is:
-
-`https://clientname.co.za`
-
-Outbound email will be sent as:
-
-`From: support@clientname.co.za`
+`add_filter('sparxstar_sendgrid/from_name', function ($name) {
+    return 'My Network';
+});`
 
 * * * * *
 
-Composer & Dependencies
------------------------
-
--   The SendGrid PHP SDK is **MIT-licensed**
-
--   Dependencies are **bundled in release builds**
-
--   Composer is **not required at runtime**
-
-The repository may include Composer metadata for build automation only.
-
-* * * * *
-
-Licensing
----------
-
-This plugin is **proprietary commercial software**.
-
--   Redistribution, modification, or resale is prohibited without permission
-
--   The bundled SendGrid SDK remains licensed under the **MIT License**
-
--   See `LICENSE.txt` for full terms
-
-* * * * *
-
-Support
+Actions
 -------
 
-**Starisian Technologies**\
-Email: support@starisian.com\
-Website: <https://starisian.com>
+### Before Send
+
+`do_action('sparxstar_sendgrid/before_send', $recipients, $subject);`
+
+### After Send
+
+`do_action('sparxstar_sendgrid/after_send', $status_code);`
 
 * * * * *
 
-Status
+Network Admin Health Page
+-------------------------
+
+Available under:
+
+`Network Admin → Sparxstar Mail`
+
+Displays:
+
+-   API key presence
+
+-   Resolved sender domain
+
+-   Active sender identity
+
+No configuration is performed in the UI.
+
+* * * * *
+
+WP-CLI
 ------
 
--   Current version: **0.5.0**
+### Test Email
 
--   Intended for production multisite use
+`wp sparxstar sendgrid test you@example.com`
 
--   Part of the SPARXSTAR infrastructure stack
-
-© 2023--2025 Starisian Technologies. All Rights Reserved.
+Outputs success or failure and sends a test email through SendGrid.
 
 * * * * *
 
-STARISIAN TECHNOLOGIES -- CONFIDENTIAL
+Logging
+-------
 
-NOTICE: All information contained herein is, and remains, the property of Starisian Technologies and its suppliers, if any. The intellectual and technical concepts contained herein are proprietary to Starisian Technologies and its suppliers and may be protected by U.S. and international copyright, trade secret, and patent laws, including patents in process.
+All runtime issues are logged via `error_log()` with consistent prefixes:
 
-Unauthorized reproduction, redistribution, transmission, or disclosure of any part of this repository is strictly prohibited without prior written consent from Starisian Technologies.
+`[SPARXSTAR SendGrid WARN]
+[SPARXSTAR SendGrid ERROR]`
+
+No logs are stored in the database.
+
+* * * * *
+
+What This Plugin Is Not
+-----------------------
+
+-   ❌ A marketing email tool
+
+-   ❌ A UI-based mail manager
+
+-   ❌ An SMTP replacement plugin
+
+-   ❌ A per-site configuration plugin
+
+-   ❌ A standalone product
+
+This is **infrastructure**.
+
+* * * * *
+
+Security Model
+--------------
+
+-   Credentials loaded only from environment
+
+-   No credential storage
+
+-   No database writes
+
+-   No background jobs
+
+-   No cron usage
+
+* * * * *
+
+License
+-------
+
+MIT License\
+Copyright © 2025--2026 Starisian Technologies.
+
+SPARXSTAR and Starisian Technologies are trademarks of Starisian Technologies
+SendGrid is a trademark of Twillio.
+
+* * * * *
+
+Related Infrastructure
+----------------------
+
+-   SparxStar Secure Custom Fields Runtime (SCF)
+
+
+* * * * *
+
+Maintainer
+----------
+
+**Starisian Technologies**\
+Support: support@starisian.com\
+Website: <https://starisian.com>
