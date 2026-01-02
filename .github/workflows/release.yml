@@ -9,6 +9,9 @@ jobs:
   build-release:
     runs-on: ubuntu-latest
     
+    env:
+      PLUGIN_SLUG: sparxstar-oort-mail
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,7 +34,6 @@ jobs:
       
       - name: Prepare release directory
         run: |
-          PLUGIN_SLUG="sparxstar-oort-mail"
           RELEASE_DIR="${PLUGIN_SLUG}"
           
           # Create a clean release directory
@@ -80,7 +82,6 @@ jobs:
       
       - name: Create release ZIP
         run: |
-          PLUGIN_SLUG="sparxstar-oort-mail"
           ZIP_FILE="${PLUGIN_SLUG}.zip"
           
           # Create the ZIP file
@@ -92,7 +93,6 @@ jobs:
       - name: Generate SHA256 checksum
         id: checksum
         run: |
-          PLUGIN_SLUG="sparxstar-oort-mail"
           ZIP_FILE="${PLUGIN_SLUG}.zip"
           
           # Generate SHA256 checksum
@@ -120,5 +120,5 @@ jobs:
             ${{ steps.checksum.outputs.checksum }}
             ```
           files: |
-            sparxstar-oort-mail.zip
-            sparxstar-oort-mail.zip.sha256
+            ${{ env.PLUGIN_SLUG }}.zip
+            ${{ env.PLUGIN_SLUG }}.zip.sha256
