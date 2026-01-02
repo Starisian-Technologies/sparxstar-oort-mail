@@ -9,7 +9,7 @@
  * @license           Starisan Technolgoes Proprietary License
  *
  * @wordpress-plugin
- * Plugin Name:       SPARXXSTAR Oort Mail
+ * Plugin Name:       SPARXSTAR Oort Mail
  * Plugin URI:        https://starisian.com/sparxstar/sparxstar-oort-mail
  * Description:       SendGrid is a proprietary SaaS, but its official SDKs are MIT-licensed and safe for commercial redistribution and wrapping.
  * Version:           0.5.0
