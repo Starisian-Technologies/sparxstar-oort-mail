@@ -59,7 +59,7 @@ final class SparxstarOortMail
     /**
      * Send an email via SendGrid API
      */
-    public static function send(
+    public static function sparx_oort_send(
         string $to,
         string $subject,
         string $html,
@@ -69,12 +69,12 @@ final class SparxstarOortMail
         $api_key = getenv('SENDGRID_API_KEY');
 
         if (!$api_key) {
-            error_log('[SendGrid] Missing SENDGRID_API_KEY');
+            error_log('[SPARXSTAR Oort] Missing SENDGRID_API_KEY');
             return false;
         }
 
         if (!class_exists(Mail::class)) {
-            error_log('[SendGrid] SDK not available (autoload failed)');
+            error_log('[SPARXSTAR Oort] SDK not available (autoload failed)');
             return false;
         }
 
@@ -99,7 +99,7 @@ final class SparxstarOortMail
             return $response->statusCode() === 202;
 
         } catch (\Throwable $e) {
-            error_log('[SendGrid] ' . $e->getMessage());
+            error_log('[SPARXSTAR Oort] ' . $e->getMessage());
             return false;
         }
     }
@@ -114,7 +114,7 @@ final class SparxstarOortMail
      * - ccTLD-aware (.gm, .za, etc.)
      * - Fallback → sparxstar.com
      */
-    private static function resolve_sender_domain(): string
+    private static function sparx_oort_resolve_sender_domain(): string
     {
         $host = wp_parse_url(home_url(), PHP_URL_HOST);
 
@@ -150,6 +150,100 @@ final class SparxstarOortMail
 
         return 'sparxstar.com';
     }
+
+
+    public static function sparx_oort_init(): void {
+        add_action('network_admin_menu', [self::class, 'sparx_oort_add_health_menu']);
+    }
+    
+    public static function sparx_oort_add_health_menu(): void {
+        add_menu_page(
+            'Oort Mail Health',
+            'Oort Mail Health',
+            'manage_network_options',
+            'oort-email-health',
+            [self::class, 'sparx_oort_render_health_page'],
+            'dashicons-email-alt',
+            100
+        );
+    }
+    
+    public static function sparx_oort_render_health_page(): void {
+    
+        if (!current_user_can('manage_network_options')) {
+            return;
+        }
+    
+        $api_key = getenv('SENDGRID_API_KEY');
+        $domain  = self::sparx_oort_resolve_sender_domain();
+        $status  = $api_key ? '✅ API Key Found' : '❌ API Key Missing';
+    
+        $message = '';
+    
+        if (
+            isset($_POST['test_email']) &&
+            check_admin_referer('sg_test_action')
+        ) {
+            $to = sanitize_email(
+                wp_unslash($_POST['test_email'])
+            );
+    
+            if (is_email($to)) {
+                $success = self::sparx_oort_send(
+                    $to,
+                    'Network Health Test',
+                    '<h1>System Check</h1><p>SendGrid is connected.</p>',
+                    'SendGrid is connected.'
+                );
+    
+                $message = $success
+                    ? 'Success! Check ' . esc_html($to)
+                    : 'Failed. Check error logs.';
+            } else {
+                $message = 'Invalid email address.';
+            }
+        }
+        ?>
+        <div class="wrap">
+            <h1>SPARXSTAR Oort Mail Health</h1>
+    
+            <div class="card" style="max-width:600px;padding:20px;">
+                <p><strong>System Status:</strong> <?php echo esc_html($status); ?></p>
+                <p><strong>Detected Default Domain:</strong>
+                    <code><?php echo esc_html($domain); ?></code>
+                </p>
+                <p><strong>Active Sending Identity:</strong>
+                    <code><?php echo esc_html('support@' . $domain); ?></code>
+                </p>
+    
+                <hr>
+    
+                <h3>Send a Test Email</h3>
+    
+                <?php if ($message): ?>
+                    <div class="notice notice-info">
+                        <p><?php echo esc_html($message); ?></p>
+                    </div>
+                <?php endif; ?>
+    
+                <form method="post">
+                    <?php wp_nonce_field('sg_test_action'); ?>
+                    <input
+                        type="email"
+                        name="test_email"
+                        placeholder="email@example.com"
+                        required
+                        style="width:250px;"
+                    >
+                    <button type="submit" class="button button-primary">
+                        Send Test
+                    </button>
+                </form>
+            </div>
+        </div>
+        <?php
+    }
+
 }
 
 /**
@@ -170,7 +264,7 @@ add_filter('pre_wp_mail', function ($null, $atts) {
 
     $to = is_array($to) ? implode(',', $to) : $to;
 
-    return SG_Transactional_Mailer::send(
+    return SparxstarOortMail::sparx_oort_send(
         $to,
         $subject,
         (string) $message,
@@ -178,3 +272,11 @@ add_filter('pre_wp_mail', function ($null, $atts) {
     );
 
 }, 10, 2);
+/**
+ * ------------------------------------------------------------
+ * 3. MU-plugin initialization
+ * ------------------------------------------------------------
+ * This initializes the plugin
+ */
+add_action('muplugins_loaded', ['SparxstarOortMail', 'sparx_oort_init']);
+
