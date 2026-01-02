@@ -28,7 +28,7 @@
  * @wordpress-muplugin
  * Plugin Name:         SparxStar SendGrid Mail Runtime
  * Description:         Infrastructure-level SendGrid mail transport for WordPress multisite.
- * Version:             0.7.0
+ * Version:             0.7.1
  * Requires PHP:        8.2
  * Requires at least:   6.8
  * Author:              Starisian Technologies (Max Barrett) <support@starisian.com>
@@ -66,6 +66,8 @@ use function add_menu_page;
 use function explode;
 use function count;
 use function str_ends_with;
+use function sanitize_email;
+
 
 if (!defined('ABSPATH')) {
 	exit;
