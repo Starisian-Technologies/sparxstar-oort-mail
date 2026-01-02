@@ -9,6 +9,9 @@ jobs:
   build-release:
     runs-on: ubuntu-latest
     
+    permissions:
+      contents: write
+    
     env:
       PLUGIN_SLUG: sparxstar-oort-mail
     
