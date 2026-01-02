@@ -1,0 +1,20 @@
+{
+  "name": "Starisian/Sparxstar-Oort-Mail",
+  "description": "SendGrid API-based transactional mailer for WordPress Multisite (MU-plugin).",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": ">=8.2",
+    "sendgrid/sendgrid": "^8.1"
+  },
+  "autoload": {
+    "classmap": []
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
