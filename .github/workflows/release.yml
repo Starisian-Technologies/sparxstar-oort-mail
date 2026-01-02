@@ -1,0 +1,144 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer
+      
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
+      
+      - name: Prepare release directory
+        run: |
+          PLUGIN_SLUG="sparxstar-oort-mail"
+          RELEASE_DIR="${PLUGIN_SLUG}"
+          
+          # Create a clean release directory
+          mkdir -p "${RELEASE_DIR}"
+          
+          # Copy all files except excluded ones
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='tests' \
+            --exclude='docs' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            --exclude='phpunit.xml' \
+            --exclude='phpunit.xml.dist' \
+            --exclude='phpcs.xml' \
+            --exclude='phpcs.xml.dist' \
+            --exclude='.editorconfig' \
+            --exclude='composer.json' \
+            --exclude='composer.lock' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='node_modules' \
+            --exclude='webpack.config.js' \
+            --exclude='*.md' \
+            --exclude="${RELEASE_DIR}" \
+            ./ "${RELEASE_DIR}/"
+          
+          # Ensure vendor/ is included
+          if [ -d "vendor" ]; then
+            echo "vendor/ directory included in release"
+          else
+            echo "Warning: vendor/ directory not found"
+          fi
+          
+          # Ensure LICENSE.txt is included
+          if [ -f "LICENSE.txt" ]; then
+            cp LICENSE.txt "${RELEASE_DIR}/"
+            echo "LICENSE.txt included in release"
+          elif [ -f "LICENSE" ]; then
+            cp LICENSE "${RELEASE_DIR}/LICENSE.txt"
+            echo "LICENSE copied as LICENSE.txt"
+          else
+            echo "Warning: LICENSE.txt not found"
+          fi
+      
+      - name: Create release ZIP
+        run: |
+          PLUGIN_SLUG="sparxstar-oort-mail"
+          ZIP_FILE="${PLUGIN_SLUG}.zip"
+          
+          # Create the ZIP file
+          cd "${PLUGIN_SLUG}" && zip -r "../${ZIP_FILE}" . -x "*.git*" && cd ..
+          
+          echo "Created ${ZIP_FILE}"
+          ls -lh "${ZIP_FILE}"
+      
+      - name: Generate SHA256 checksum
+        id: checksum
+        run: |
+          PLUGIN_SLUG="sparxstar-oort-mail"
+          ZIP_FILE="${PLUGIN_SLUG}.zip"
+          
+          # Generate SHA256 checksum
+          sha256sum "${ZIP_FILE}" > "${ZIP_FILE}.sha256"
+          
+          # Display checksum
+          cat "${ZIP_FILE}.sha256"
+          
+          # Save checksum to output
+          CHECKSUM=$(sha256sum "${ZIP_FILE}" | awk '{print $1}')
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+      
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          release_name: Release ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: false
+          body: |
+            Release ${{ steps.version.outputs.tag }}
+            
+            **SHA256 Checksum:**
+            ```
+            ${{ steps.checksum.outputs.checksum }}
+            ```
+      
+      - name: Upload Release ZIP
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./sparxstar-oort-mail.zip
+          asset_name: sparxstar-oort-mail.zip
+          asset_content_type: application/zip
+      
+      - name: Upload SHA256 Checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./sparxstar-oort-mail.zip.sha256
+          asset_name: sparxstar-oort-mail.zip.sha256
+          asset_content_type: text/plain
