@@ -105,14 +105,11 @@ jobs:
           CHECKSUM=$(sha256sum "${ZIP_FILE}" | awk '{print $1}')
           echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
       
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          release_name: Release ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
           draft: false
           prerelease: false
           body: |
@@ -122,23 +119,6 @@ jobs:
             ```
             ${{ steps.checksum.outputs.checksum }}
             ```
-      
-      - name: Upload Release ZIP
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./sparxstar-oort-mail.zip
-          asset_name: sparxstar-oort-mail.zip
-          asset_content_type: application/zip
-      
-      - name: Upload SHA256 Checksum
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./sparxstar-oort-mail.zip.sha256
-          asset_name: sparxstar-oort-mail.zip.sha256
-          asset_content_type: text/plain
+          files: |
+            sparxstar-oort-mail.zip
+            sparxstar-oort-mail.zip.sha256
