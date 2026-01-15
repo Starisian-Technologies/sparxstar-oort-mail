@@ -66,8 +66,6 @@ use function add_menu_page;
 use function explode;
 use function count;
 use function str_ends_with;
-use function sanitize_email;
-
 
 if (!defined('ABSPATH')) {
 	exit;
