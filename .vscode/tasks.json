@@ -1,0 +1,59 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run PHPCS (composer script 'lint')",
+            "type": "shell",
+            "command": "composer",
+            "args": [
+                "run-script",
+                "lint"
+            ],
+            "problemMatcher": "$phpcs",
+            "group": "test"
+        },
+        {
+            "label": "Run PHPStan (composer script 'analyze')",
+            "type": "shell",
+            "command": "composer",
+            "args": [
+                "run-script",
+                "analyze"
+            ],
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
+            "label": "Fix PHPCS Errors (composer script 'fix')",
+            "type": "shell",
+            "command": "composer",
+            "args": [
+                "run-script",
+                "fix"
+            ],
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Run PHPCS (using phpcs.xml)",
+            "type": "shell",
+            "command": "./vendor/bin/phpcs",
+            "args": [
+                "."
+            ],
+            "problemMatcher": "$phpcs",
+            "presentation": {
+                "reveal": "silent"
+            }
+        },
+        {
+            "label": "Run PHPStan (using phpstan.neon)",
+            "type": "shell",
+            "command": "./vendor/bin/phpstan",
+            "args": [
+                "analyse"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
