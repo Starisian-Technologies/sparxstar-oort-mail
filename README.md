@@ -1,14 +1,14 @@
 SPARXSTAR SendGrid Mail Runtime
 ===============================
 
-**Infrastructure-level SendGrid mail transport for WordPress multisite**
+**Infrastructure-level SPARXSTAR SendGrid transport for WordPress multisite**
 
 * * * * *
 
 Overview
 --------
 
-**SPARXSTAR SendGrid Mail Runtime** is a **network-wide MU-plugin** that provides a deterministic, SendGrid-backed email transport layer for WordPress multisite environments.
+**SPARXSTAR SendGrid Runtime** is a **network-wide MU-plugin** that provides a deterministic, SendGrid-backed email transport layer for WordPress multisite environments using the official SendGrid mail PHP SDK.
 
 It is designed as **shared infrastructure**, not a product, and is always loaded when present.
 
@@ -19,42 +19,44 @@ This runtime safely intercepts `wp_mail()` and routes email delivery through the
 Design Goals
 ------------
 
--   Deterministic, network-wide email delivery
+- Deterministic, network-wide email delivery
 
--   No SMTP configuration
+- No SMTP configuration
 
--   No plugin activation lifecycle
+- No plugin activation lifecycle
 
--   Safe interception of `wp_mail()`
+- Safe interception of `wp_mail()`
 
--   Composer-optional dependency loading
+- Composer-optional dependency loading
 
--   Multisite-first architecture
+- Multisite-first architecture
 
--   Minimal surface area and predictable behavior
+- Minimal surface area and predictable behavior
 
 * * * * *
 
 Key Features
 ------------
 
--   Intercepts `wp_mail()` using `pre_wp_mail` (best practice)
+- Intercepts `wp_mail()` using `pre_wp_mail` (best practice)
 
--   Sends mail via SendGrid REST API (no SMTP)
+- Sends mail via SendGrid REST API (no SMTP)
 
--   Optional Composer autoload support
+- Optional Composer autoload support
 
--   Network admin health diagnostics
+- Network admin health diagnostics
 
--   CC-TLD-aware sender domain resolution
+- CC-TLD-aware sender domain resolution
 
--   Filterable sender identity
+- Full attachment support (local files & dynamic content)
 
--   WP-CLI test command
+- Filterable sender identity
 
--   Zero database writes
+- WP-CLI test command
 
--   Zero background processes
+- Zero database writes
+
+- Zero background processes
 
 * * * * *
 
@@ -68,15 +70,23 @@ Requirements
 | Environment  | Multisite recommended  |
 | SendGrid API | Required               |
 
-
 * * * * *
 
 Installation
 ------------
 
+### Via Composer (Recommended)
+
+```bash
+composer require starisian/sparxstar-sendgrid-runtime
+```
+
+### Manual Installation
+
 This runtime **must be installed as an MU-plugin**.
 
-`/wp-content/mu-plugins/sparxstar-sendgrid-mail-runtime.php`
+Copy `sparxstar-sendgrid-runtime.php` to:
+`/wp-content/mu-plugins/sparxstar-sendgrid-runtime.php`
 
 No activation step is required or supported.
 
@@ -100,13 +110,13 @@ Runtime Behavior
 
 ### Mail Interception
 
--   Hooks into `pre_wp_mail`
+- Hooks into `pre_wp_mail`
 
--   Validates recipients, subject, and message
+- Validates recipients, subject, and message
 
--   Falls back to native WordPress mail if input is malformed
+- Falls back to native WordPress mail if input is malformed
 
--   Sends via SendGrid only when all conditions are met
+- Sends via SendGrid only when all conditions are met
 
 ### Sender Resolution
 
@@ -116,11 +126,11 @@ The sender email defaults to:
 
 Domain resolution is:
 
--   CC-TLD aware (`.com.gm`, `.co.za`, `.co.uk`, etc.)
+- CC-TLD aware (`.com.gm`, `.co.za`, `.co.uk`, etc.)
 
--   Reduced to registrable base domain
+- Reduced to registrable base domain
 
--   Falls back to `sparxstar.com`
+- Falls back to `sparxstar.com`
 
 * * * * *
 
@@ -163,11 +173,11 @@ Available under:
 
 Displays:
 
--   API key presence
+- API key presence
 
--   Resolved sender domain
+- Resolved sender domain
 
--   Active sender identity
+- Active sender identity
 
 No configuration is performed in the UI.
 
@@ -196,18 +206,33 @@ No logs are stored in the database.
 
 * * * * *
 
+Development
+-----------
+
+This project adheres to strict coding standards (WordPress Extra + PSR compatible rules).
+
+### Available Commands
+
+- **Lint Code**: `composer run lint`
+- **Auto-fix Code**: `composer run fix` (Fixes indentation, spacing, array syntax)
+- **Static Analysis**: `composer run analyze` (PHPStan)
+
+The codebase is strictly typed and verified against PHP 8.2+ compatibility.
+
+* * * * *
+
 What This Plugin Is Not
 -----------------------
 
--   ❌ A marketing email tool
+- ❌ A marketing email tool
 
--   ❌ A UI-based mail manager
+- ❌ A UI-based mail manager
 
--   ❌ An SMTP replacement plugin
+- ❌ An SMTP replacement plugin
 
--   ❌ A per-site configuration plugin
+- ❌ A per-site configuration plugin
 
--   ❌ A standalone product
+- ❌ A standalone product
 
 This is **infrastructure**.
 
@@ -216,15 +241,15 @@ This is **infrastructure**.
 Security Model
 --------------
 
--   Credentials loaded only from environment
+- Credentials loaded only from environment
 
--   No credential storage
+- No credential storage
 
--   No database writes
+- No database writes
 
--   No background jobs
+- No background jobs
 
--   No cron usage
+- No cron usage
 
 * * * * *
 
@@ -235,15 +260,14 @@ MIT License\
 Copyright © 2025--2026 Starisian Technologies.
 
 SPARXSTAR and Starisian Technologies are trademarks of Starisian Technologies
-SendGrid is a trademark of Twillio.
+SendGrid is a trademark of Twillio. SPARXSTAR is in no way affiliated with SendGrid or Twillio.
 
 * * * * *
 
 Related Infrastructure
 ----------------------
 
--   SparxStar Secure Custom Fields Runtime (SCF)
-
+- SPARXSTAR 2FA Enforcement
 
 * * * * *
 
@@ -251,5 +275,5 @@ Maintainer
 ----------
 
 **Starisian Technologies**\
-Support: support@starisian.com\
+Support: <support@starisian.com>\
 Website: <https://starisian.com>

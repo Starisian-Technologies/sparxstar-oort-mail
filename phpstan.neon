@@ -1,0 +1,13 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - .
+    excludePaths:
+        - vendor/
+    scanFiles:
+        # If you are in a standalone folder and WP is not installed in the root,
+        # you might need to exclude missing constants or stub them.
+        # usually the extension handles most of this.
