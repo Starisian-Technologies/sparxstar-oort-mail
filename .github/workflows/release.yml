@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    env:
+      PLUGIN_SLUG: sparxstar-sendgrid-mail-runtime
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Install Composer dependencies (if present)
+        run: |
+          if [ -f composer.json ]; then
+            composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
+          else
+            echo "No composer.json found — skipping Composer install"
+          fi
+
+      - name: Prepare release directory
+        run: |
+          RELEASE_DIR="${PLUGIN_SLUG}"
+
+          mkdir -p "${RELEASE_DIR}"
+
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='tests' \
+            --exclude='docs' \
+            --exclude='.gitignore' \
+            --exclude='.gitattributes' \
+            --exclude='phpunit.xml*' \
+            --exclude='phpcs.xml*' \
+            --exclude='.editorconfig' \
+            --exclude='node_modules' \
+            --exclude='package*.json' \
+            --exclude='webpack.config.js' \
+            --exclude="${RELEASE_DIR}" \
+            ./ "${RELEASE_DIR}/"
+
+          echo "Release directory prepared"
+
+      - name: Ensure LICENSE is included
+        run: |
+          if [ -f "LICENSE" ]; then
+            cp LICENSE "${PLUGIN_SLUG}/LICENSE"
+          elif [ -f "LICENSE.txt" ]; then
+            cp LICENSE.txt "${PLUGIN_SLUG}/LICENSE"
+          else
+            echo "Warning: LICENSE file not found"
+          fi
+
+      - name: Create release ZIP
+        run: |
+          ZIP_FILE="${PLUGIN_SLUG}.zip"
+          cd "${PLUGIN_SLUG}" && zip -r "../${ZIP_FILE}" . && cd ..
+          ls -lh "${ZIP_FILE}"
+
+      - name: Generate SHA256 checksum
+        id: checksum
+        run: |
+          ZIP_FILE="${PLUGIN_SLUG}.zip"
+          sha256sum "${ZIP_FILE}" > "${ZIP_FILE}.sha256"
+          CHECKSUM=$(awk '{print $1}' "${ZIP_FILE}.sha256")
+          echo "checksum=$CHECKSUM" >> $GITHUB_OUTPUT
+          cat "${ZIP_FILE}.sha256"
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          draft: false
+          prerelease: false
+          body: |
+            **SparxStar SendGrid Mail Runtime**
+
+            Infrastructure-level MU-plugin for WordPress multisite.
+
+            **SHA256 Checksum**
+            ```
+            ${{ steps.checksum.outputs.checksum }}
+            ```
+          files: |
+            ${{ env.PLUGIN_SLUG }}.zip
+            ${{ env.PLUGIN_SLUG }}.zip.sha256
