@@ -17,6 +17,8 @@ It is designed as **shared infrastructure**, not a product, and is always loaded
 
 This runtime safely intercepts `wp_mail()` and routes email delivery through the SendGrid API while preserving WordPress compatibility and fallback behavior.
 
+[![CodeQL](https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime/actions/workflows/github-code-scanning/codeql)  [![Copilot code review](https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime/actions/workflows/copilot-pull-request-reviewer/copilot-pull-request-reviewer/badge.svg)](https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime/actions/workflows/copilot-pull-request-reviewer/copilot-pull-request-reviewer)  [![Copilot coding agent](https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime/actions/workflows/copilot-swe-agent/copilot/badge.svg)](https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime/actions/workflows/copilot-swe-agent/copilot)  [![Release](https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime/actions/workflows/release.yml/badge.svg)](https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime/actions/workflows/release.yml)
+
 * * * * *
 
 Design Goals
