@@ -73,7 +73,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-if( ! defined('SPARXSTAR_SENDGRID_API_KEY')) {
+if ( ! defined( 'SPARXSTAR_SENDGRID_API_KEY' ) ) {
 	define( 'SPARXSTAR_SENDGRID_API_KEY', 'keys-do-not-belong-here' );
 }
 
