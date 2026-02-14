@@ -73,6 +73,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if( ! defined('SPARXSTAR_SENDGRID_API_KEY')) {
+	define( 'SPARXSTAR_SENDGRID_API_KEY', 'keys-do-not-belong-here' );
+}
+
 /**
  * Class Sparxstar_SendGrid_Runtime
  *
@@ -117,7 +121,7 @@ final class Sparxstar_SendGrid_Runtime {
 	 * Populates API key from environment.
 	 */
 	private function __construct() {
-		$this->SENDGRID_API_KEY = getenv( 'SENDGRID_API_KEY' );
+		$this->SENDGRID_API_KEY = SPARXSTAR_SENDGRID_API_KEY;
 	}
 
 	/**
