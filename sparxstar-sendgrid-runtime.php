@@ -74,9 +74,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'SPARXSTAR_SENDGRID_API_KEY' ) ) {
-	define( 'SPARXSTAR_SENDGRID_API_KEY', 'keys-do-not-belong-here' );
+	define( 'SPARXSTAR_SENDGRID_API_KEY', 'keys-dont-belong-here' );
 }
-
 /**
  * Class Sparxstar_SendGrid_Runtime
  *
