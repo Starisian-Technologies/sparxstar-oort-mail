@@ -27,7 +27,8 @@ jobs:
           echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        # uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@44454db4f0199b8b9685a5d763dc37cbf79108e1
         with:
           php-version: '8.2'
           tools: composer
@@ -90,7 +91,8 @@ jobs:
           cat "${ZIP_FILE}.sha256"
 
       - name: Create GitHub Release and Upload Assets
-        uses: softprops/action-gh-release@v2
+        # uses: softprops/action-gh-release@v2
+        uses: phuonghuynh/action-ghrelease@08c9010ba33d1fbafd7a06d35afebb93dd0b876a
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
