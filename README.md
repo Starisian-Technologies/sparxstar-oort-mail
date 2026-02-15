@@ -91,7 +91,7 @@ composer require starisian/sparxstar-sendgrid-runtime
 This runtime **must be installed as an MU-plugin**.
 
 1. Clone or unzip this repository into `wp-content/mu-plugins/sparxstar-sendgrid-runtime/`.
-2. Move `sparxstar-sendgrid-loader.php` from that directory to `wp-content/mu-plugins/`.
+2. Move `sparxstar-sendgrid-runtime-loader.php` from that directory to `wp-content/mu-plugins/`.
 
 No activation step is required or supported.
 
