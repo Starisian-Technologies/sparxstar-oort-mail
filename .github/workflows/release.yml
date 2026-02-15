@@ -13,7 +13,7 @@ jobs:
       contents: write
 
     env:
-      PLUGIN_SLUG: sparxstar-sendgrid-mail-runtime
+      PLUGIN_SLUG: sparxstar-sendgrid-runtime
 
     steps:
       - name: Checkout code
@@ -100,9 +100,9 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            **SparxStar SendGrid Mail Runtime**
+            **SparxStar SendGrid Runtime**
 
-            Infrastructure-level MU-plugin for WordPress multisite.
+            Infrastructure-level SPARXSSTAR MU-plugin for WordPress multisite email transport via the SendGrid API.
 
             **SHA256 Checksum**
             ```
