@@ -94,6 +94,7 @@ jobs:
         # uses: softprops/action-gh-release@v2
         uses: phuonghuynh/action-ghrelease@08c9010ba33d1fbafd7a06d35afebb93dd0b876a
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
           draft: false
