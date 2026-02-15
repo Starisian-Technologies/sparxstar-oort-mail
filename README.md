@@ -1,10 +1,10 @@
 
 <img width="1280" height="640" alt="sparxstar-sendgrid-runtime" src="https://github.com/user-attachments/assets/07ffd676-0cc0-4f8c-b807-4aefb7f5a350" />
 
-SPARXSTAR SendGrid Mail Runtime
+SPARXSTAR SendGrid Runtime
 ===============================
 
-**Infrastructure-level SPARXSTAR SendGrid transport for WordPress multisite**
+**Infrastructure-level SPARXSTAR SendGrid Runtime for WordPress multisite email transport via the SendGrid API**
 
 * * * * *
 
