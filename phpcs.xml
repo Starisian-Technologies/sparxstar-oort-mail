@@ -12,6 +12,11 @@
     <!-- Exclude built assets if any -->
     <exclude-pattern>/build/</exclude-pattern>
 
+    <!-- Ignore filename class convention for main runtime file -->
+    <rule ref="WordPress.Files.FileName">
+        <exclude-pattern>sparxstar-sendgrid-runtime.php</exclude-pattern>
+    </rule>
+
     <!-- CLI Output Settings -->
     <arg name="colors"/>
     <arg value="sp"/> <!-- Show progress & sniff codes -->

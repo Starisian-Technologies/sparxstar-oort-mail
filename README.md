@@ -90,8 +90,8 @@ composer require starisian/sparxstar-sendgrid-runtime
 
 This runtime **must be installed as an MU-plugin**.
 
-Copy `sparxstar-sendgrid-runtime.php` to:
-`/wp-content/mu-plugins/sparxstar-sendgrid-runtime.php`
+1. Clone or unzip this repository into `wp-content/mu-plugins/sparxstar-sendgrid-runtime/`.
+2. Move `sparxstar-sendgrid-loader.php` from that directory to `wp-content/mu-plugins/`.
 
 No activation step is required or supported.
 
@@ -102,11 +102,13 @@ Configuration
 
 ### SendGrid API Key
 
-The SendGrid API key **must** be provided via environment variable:
+The SendGrid API key **must** be provided via a WordPress constant in `wp-config.php`:
 
-`SENDGRID_API_KEY=your_api_key_here`
+```php
+define( 'SPARXSTAR_SENDGRID_API_KEY', 'your_api_key_here' );
+```
 
-This runtime does **not** support storing credentials in the database or wp-config.php by design.
+This runtime does **not** support storing credentials in the database by design.
 
 * * * * *
 

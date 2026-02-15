@@ -1,10 +1,11 @@
 <?php
-
 /**
- * SparxStar SendGrid Mail Runtime
- *
- * Network-wide MU-plugin runtime that provides a deterministic SendGrid-based
- * email transport layer for WordPress multisite environments.
+ * Plugin Name: SparxStarSendGridRuntime
+ * Description: A shared SendGrid-backed mail transport for the SparxStar multisite ecosystem.
+ * Version: 0.8.0
+ * Author: Starisian Technologies (Max Barrett)
+ * License: MIT
+ * Text Domain: sparxstar-sendgrid
  *
  * This file:
  * - Intercepts wp_mail() safely via pre_wp_mail
@@ -21,38 +22,22 @@
  * - sparxstar_sendgrid/before_send
  * - sparxstar_sendgrid/after_send
  *
- * @package   Starisian\Sparxstar\SendGrid
- * @author    Starisian Technologies (Max Barrett) <support@starisian.com>
- * @license   MIT
- * @copyright Copyright (c) 2025–2026 Starisian Technologies
- *
- * @wordpress-muplugin
- * Plugin Name:         SparxStar SendGrid Mail Runtime
- * Description:         Infrastructure-level SendGrid mail transport for WordPress multisite.
- * Version:             0.7.1
- * Requires PHP:        8.2
- * Requires at least:   6.8
- * Author:              Starisian Technologies (Max Barrett) <support@starisian.com>
- * Author URI:          https://starisian.com
- * License: MIT
- * Plugin URI:          https://github.com/Starisian-Technologies/sparxstar-sendgrid-mail-runtime
+ * @package Starisian\Sparxstar\SendGrid
  */
+
+// phpcs:enable
 
 declare(strict_types=1);
 
 namespace Starisian\Sparxstar\SendGrid;
 
-use SendGrid\Mail\Mail;
 use WP_CLI;
-use function base64_encode;
+
 use function add_action;
 use function add_filter;
 use function class_exists;
 use function defined;
 use function esc_html;
-use function error_log;
-use function file_exists;
-use function getenv;
 use function implode;
 use function is_array;
 use function is_email;
@@ -67,6 +52,7 @@ use function add_menu_page;
 use function explode;
 use function count;
 use function str_ends_with;
+use function wp_doing_it_wrong;
 
 // Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -74,53 +60,84 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 if ( ! defined( 'SPARXSTAR_SENDGRID_API_KEY' ) ) {
-	define( 'SPARXSTAR_SENDGRID_API_KEY', 'keys-dont-belong-here' );
+	define( 'SPARXSTAR_SENDGRID_API_KEY', '' );
 }
+
 /**
- * Class Sparxstar_SendGrid_Runtime
+ * Class SparxstarSendGridRuntime
  *
  * Provides a shared SendGrid-backed mail transport
  * for the Sparxstar multisite ecosystem.
  *
  * @package Starisian\Sparxstar\SendGrid
  */
-final class Sparxstar_SendGrid_Runtime {
+final class SparxstarSendGridRuntime {
 
 
 
 
-	/**
-	 * Singleton instance container.
-	 *
-	 * @var self|null
-	 */
-	private static ?self $Sparxstar_SendGrid_Runtime = null;
+
 
 	/**
 	 * Runtime version.
 	 *
 	 * @var string
 	 */
-	private const VERSION = '0.7.1';
+	private const VERSION = '0.8.0';
 
 	/**
-	 * SendGrid API Key.
+	 * Instance container.
 	 *
-	 * Loaded from environment variable.
+	 * @var self|null
+	 */
+	private static ?SparxstarSendGridRuntime $instance = null;
+
+	/**
+	 * API Key Container.
 	 *
 	 * @var string
 	 */
-	private string $SENDGRID_API_KEY = '';
-
-
+	private static string $api_key = '';
 
 	/**
-	 * Initialize runtime.
+	 * Get singleton instance.
 	 *
-	 * Populates API key from environment.
+	 * @return self
+	 */
+	public static function sparx_sendgrid_get_instance(): self {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
+	 * Constructor.
+	 *
+	 * Initialize the runtime.
 	 */
 	private function __construct() {
-		$this->SENDGRID_API_KEY = SPARXSTAR_SENDGRID_API_KEY;
+		if ( defined( 'SPARXSTAR_SENDGRID_API_KEY' ) ) {
+			self::$api_key = SPARXSTAR_SENDGRID_API_KEY;
+		}
+		// Allow API key override via filter for dynamic retrieval (e.g. from env or vault).
+		self::$api_key = apply_filters( 'sparxstar_sendgrid/api_key', self::$api_key );
+		// Register hooks.
+		$this->sparx_sendgrid_register_hooks();
+	}
+	/**
+	 * Register WordPress hooks.
+	 *
+	 * @internal
+	 * @return void
+	 */
+	private function sparx_sendgrid_register_hooks(): void {
+		// Register early hook to ensure we bootstrap before any mail is sent.
+		add_action( 'muplugins_loaded', [ self::class, 'sparx_sendgrid_bootstrap' ] );
+		// Register CLI commands if WP-CLI is present.
+		if ( defined( 'WP_CLI' ) && class_exists( 'WP_CLI' ) ) {
+			add_action( 'cli_init', [ self::class, 'sparx_sendgrid_cli' ] );
+		}
 	}
 
 	/**
@@ -130,14 +147,14 @@ final class Sparxstar_SendGrid_Runtime {
 	 */
 	public static function sparx_sendgrid_bootstrap(): void {
 		self::sparx_sendgrid_bootstrap_autoload();
-
+		// Register mail interception hook.
 		add_filter(
 			'pre_wp_mail',
 			[ self::class, 'sparx_sendgrid_intercept' ],
 			10,
 			2
 		);
-
+		// Register network admin health page.
 		add_action(
 			'network_admin_menu',
 			[ self::class, 'sparx_sendgrid_register_health_page' ]
@@ -151,11 +168,13 @@ final class Sparxstar_SendGrid_Runtime {
 	 * @return void
 	 */
 	private static function sparx_sendgrid_bootstrap_autoload(): void {
+		// Check multiple common locations for autoload.php to maximize compatibility with different setups.
 		$autoload_paths = [
+			__DIR__ . '/vendor/autoload.php',
 			ABSPATH . 'vendor/autoload.php',
 			WP_CONTENT_DIR . '/vendor/autoload.php',
 		];
-
+		// Attempt to load the SendGrid SDK via Composer autoload if available.
 		foreach ( $autoload_paths as $path ) {
 			if ( file_exists( $path ) ) {
 				require_once $path;
@@ -175,17 +194,17 @@ final class Sparxstar_SendGrid_Runtime {
 		$to      = $atts['to'] ?? null;
 		$subject = $atts['subject'] ?? null;
 		$message = $atts['message'] ?? null;
-
+		// Basic validation: Ensure required fields are present.
 		if ( ! $to || ! $subject || ! $message ) {
 			return null;
 		}
-
+		// Normalize recipients to array and validate emails.
 		$recipients = is_array( $to ) ? $to : [ $to ];
 		$recipients = array_filter(
 			$recipients,
 			static fn( $email ) => is_email( $email )
 		);
-
+		// If no valid recipients, skip sending.
 		if ( [] === $recipients ) {
 			return null;
 		}
@@ -238,13 +257,13 @@ final class Sparxstar_SendGrid_Runtime {
 		array $attachments = [],
 		string $content_type = 'text/html'
 	): bool {
-		$api_key = getenv( 'SENDGRID_API_KEY' );
 
-		if ( ! $api_key ) {
+		// Validate API key presence.
+		if ( '' === self::$api_key ) {
 			self::sparx_sendgrid_log( 'WARN', 'Missing SENDGRID_API_KEY' );
 			return false;
 		}
-
+		// Validate SendGrid SDK presence.
 		if ( ! class_exists( \SendGrid\Mail\Mail::class ) ) {
 			self::sparx_sendgrid_log( 'ERROR', 'SendGrid SDK not loaded (autoload missing)' );
 			return false;
@@ -271,7 +290,7 @@ final class Sparxstar_SendGrid_Runtime {
 
 		do_action( 'sparxstar_sendgrid/before_send', $recipients, $subject );
 
-		$email = new Mail();
+		$email = new \SendGrid\Mail\Mail();
 		$email->setFrom( $from_email, $from_name );
 		$email->setSubject( $subject );
 
@@ -279,52 +298,65 @@ final class Sparxstar_SendGrid_Runtime {
 			$email->addTo( $recipient );
 		}
 
-		// Add Reply-To
-		if ( $reply_to && ! empty( $reply_to['email'] ) ) {
+		// Add Reply-To.
+		if ( is_array( $reply_to ) && isset( $reply_to['email'] ) && '' !== $reply_to['email'] ) {
 			$email->setReplyTo( $reply_to['email'], $reply_to['name'] ?? null );
 		}
 
-		// Add CC
+		// Add CC.
 		foreach ( $cc as $cc_email ) {
 			if ( is_email( $cc_email ) ) {
 				$email->addCc( $cc_email );
 			}
 		}
 
-		// Add BCC
+		// Add BCC.
 		foreach ( $bcc as $bcc_email ) {
 			if ( is_email( $bcc_email ) ) {
 				$email->addBcc( $bcc_email );
 			}
 		}
 
-		// Handle Content Type & Body
+		// Handle Content Type & Body.
 		if ( str_contains( strtolower( $content_type ), 'text/plain' ) ) {
 			$email->addContent( 'text/plain', $html );
 		} else {
-			if ( $text ) {
+			if ( null !== $text && '' !== $text ) {
 				$email->addContent( 'text/plain', $text );
 			}
 			$email->addContent( 'text/html', $html );
 		}
 
-		// Handle Attachments
+		// Handle Attachments.
 		foreach ( $attachments as $file_path ) {
 			if ( is_string( $file_path ) && is_readable( $file_path ) && is_file( $file_path ) ) {
-				try {
+				try {                   // VIP: Validate file size to prevent memory exhaustion (e.g. < 25MB).
+					if ( filesize( $file_path ) > 25 * 1024 * 1024 ) {
+						self::sparx_sendgrid_log( 'WARN', "Attachment too large: $file_path" );
+						continue;
+					}
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 					$file_content = file_get_contents( $file_path );
-					if ( $file_content === false ) {
+					if ( false === $file_content ) {
 						continue;
 					}
 
 					$attachment = new \SendGrid\Mail\Attachment();
+					// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 					$attachment->setContent( base64_encode( $file_content ) );
-					$attachment->setType( mime_content_type( $file_path ) ?: 'application/octet-stream' );
+					$mime_type = mime_content_type( $file_path );
+					$attachment->setType(
+						// phpcs:ignore Universal.Operators.DisallowShortTernary.Found
+						$mime_type ? $mime_type : 'application/octet-stream'
+					);
 					$attachment->setFilename( basename( $file_path ) );
 					$attachment->setDisposition( 'attachment' );
 					$email->addAttachment( $attachment );
 				} catch ( \Throwable $e ) {
-					self::sparx_sendgrid_log( 'WARN', "Failed to attach file: $file_path. " . $e->getMessage() );
+					self::sparx_sendgrid_log(
+						'WARN',
+						"Failed to attach file: $file_path. " . $e->getMessage()
+					);
 				}
 			}
 		}
@@ -337,7 +369,7 @@ final class Sparxstar_SendGrid_Runtime {
 				];
 			}
 
-			$client   = new \SendGrid( $api_key, $options );
+			$client   = new \SendGrid( self::$api_key, $options );
 			$response = $client->send( $email );
 
 			do_action(
@@ -402,7 +434,8 @@ final class Sparxstar_SendGrid_Runtime {
 	 * Handles standard WP filters for From address.
 	 *
 	 * @param string|array $headers Headers passed to wp_mail().
-	 * @return array{from: array{email:string, name:string}, reply_to: array|null, cc: array, bcc: array}
+	 * @return array{from: array{email:string, name:string}, reply_to: array|null,
+	 * cc: array, bcc: array, content_type: string}
 	 */
 	private static function sparx_sendgrid_parse_headers( $headers = [] ): array {
 		// 1. Establish Default From (Sparxstar Logic)
@@ -421,8 +454,8 @@ final class Sparxstar_SendGrid_Runtime {
 			'content_type' => 'text/html',
 		];
 
-		// 2. Parse Headers
-		if ( ! empty( $headers ) ) {
+		// 2. Parse Headers.
+		if ([] !== $headers && '' !== $headers) { // phpcs:ignore
 			if ( ! is_array( $headers ) ) {
 				$headers = explode( "\n", str_replace( "\r\n", "\n", $headers ) );
 			}
@@ -436,13 +469,13 @@ final class Sparxstar_SendGrid_Runtime {
 				$key   = trim( strtolower( $parts[0] ) );
 				$val   = trim( $parts[1] );
 
-				// Handle Content-Type specifically
-				if ( $key === 'content-type' ) {
+				// Handle Content-Type specifically.
+				if ( 'content-type' === $key ) {
 					$parsed['content_type'] = $val;
 					continue;
 				}
 
-				// Extract email/name: "Name <email>" or "email"
+				// Extract email/name: "Name <email>" or "email".
 				$name_extracted  = '';
 				$email_extracted = $val;
 
@@ -523,6 +556,8 @@ final class Sparxstar_SendGrid_Runtime {
 		return str_ends_with( strtolower( $email_domain ), strtolower( $safe_domain ) );
 	}
 
+
+
 	/**
 	 * Register network admin health page.
 	 *
@@ -550,12 +585,13 @@ final class Sparxstar_SendGrid_Runtime {
 			return;
 		}
 
-		$api_key = getenv( 'SENDGRID_API_KEY' );
+		$api_key = self::$api_key;
 		$domain  = self::sparx_sendgrid_resolve_domain();
-		$status  = $api_key ? 'API Key Detected' : 'API Key Missing';
+		$status  = ( '' !== $api_key ) ? 'API Key Detected' : 'API Key Missing';
+		$version = self::VERSION;
 		?>
 		<div class="wrap">
-			<h1>SPARXSTAR SendGrid Mail Runtime</h1>
+			<h1>SPARXSTAR SendGrid Mail Runtime v<?php echo esc_html( $version ); ?></h1>
 			<p><strong>Status:</strong> <?php echo esc_html( $status ); ?></p>
 			<p><strong>Sender:</strong> support@<?php echo esc_html( $domain ); ?></p>
 		</div>
@@ -568,7 +604,7 @@ final class Sparxstar_SendGrid_Runtime {
 	 * @return void
 	 */
 	public static function sparx_sendgrid_cli(): void {
-		if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
+		if ( ! class_exists( 'WP_CLI' ) ) {
 			return;
 		}
 
@@ -598,24 +634,68 @@ final class Sparxstar_SendGrid_Runtime {
 	 * Writes error to log file.
 	 *
 	 * @internal
+	/**
+	 * Writes error to log file.
+	 *
+	 * @internal
 	 * @param string $level   Log level (WARN, ERROR).
 	 * @param string $message Log message content.
 	 * @return void
 	 */
 	private static function sparx_sendgrid_log( string $level, string $message ): void {
-		error_log( "[SPARXSTAR SendGrid {$level}] {$message}" );
+		// Only log if WP_DEBUG is enabled or we are in a non-production environment.
+		if (
+			( defined( 'WP_DEBUG' ) && WP_DEBUG ) ||
+			( function_exists( 'wp_get_environment_type' ) && 'production' !== wp_get_environment_type() )
+		) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( "[SPARXSTAR SendGrid {$level}] {$message}" );
+		}
+	}
+
+	/**
+	 * Prevent cloning.
+	 */
+	public function __clone(): void {
+		// Prevent cloning of the singleton instance.
+		wp_doing_it_wrong( __METHOD__, 'Cloning is not allowed for this class.', '0.8.0' );
+	}
+
+	/**
+	 * Prevent unserialization.
+	 */
+	public function __wakeup(): void {
+		// Prevent unserialization of the singleton instance.
+		wp_doing_it_wrong( __METHOD__, 'Unserialization is not allowed for this class.', '0.8.0' );
+	}
+
+	/**
+	 * Prevent serialization.
+	 *
+	 * @return array
+	 */
+	public function __sleep(): array {
+		// Prevent serialization of the singleton instance.
+		wp_doing_it_wrong( __METHOD__, 'Serialization is not allowed for this class.', '0.8.0' );
+		return [];
+	}
+
+	/**
+	 * Prevent serialization (PHP 8.1+).
+	 *
+	 * @return array
+	 */
+	public function __serialize(): array {
+		wp_doing_it_wrong( __METHOD__, 'Serialization is not allowed for this class.', '0.8.0' );
+		return [];
+	}
+
+	/**
+	 * Prevent unserialization (PHP 8.1+).
+	 *
+	 * @param array $data Serialized data.
+	 */
+	public function __unserialize( array $data ): void {
+		wp_doing_it_wrong( __METHOD__, 'Unserialization is not allowed for this class.', '0.8.0' );
 	}
 }
-
-/**
- * Hooks
- */
-add_action(
-	'muplugins_loaded',
-	[ Sparxstar_SendGrid_Runtime::class, 'sparx_sendgrid_bootstrap' ]
-);
-
-add_action(
-	'cli_init',
-	[ Sparxstar_SendGrid_Runtime::class, 'sparx_sendgrid_cli' ]
-);

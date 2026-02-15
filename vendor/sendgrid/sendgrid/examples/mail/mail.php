@@ -4,44 +4,43 @@
 // Please refer to the README how to use in your project
 require_once __DIR__ . '/../../sendgrid-php.php';
 
-$apiKey = getenv( 'SENDGRID_API_KEY' );
-$sg     = new \SendGrid( $apiKey );
+$apiKey = getenv('SENDGRID_API_KEY');
+$sg = new \SendGrid($apiKey);
 
-//
+////////////////////////////////////////////////////
 // Create a batch ID #
 // POST /mail/batch #
 
 try {
-	$response = $sg->client->mail()->batch()->post();
-	print $response->statusCode() . "\n";
-	print_r( $response->headers() );
-	print $response->body() . "\n";
-} catch ( Exception $e ) {
-	echo 'Caught exception: ', $e->getMessage(), "\n";
+    $response = $sg->client->mail()->batch()->post();
+    print $response->statusCode() . "\n";
+    print_r($response->headers());
+    print $response->body() . "\n";
+} catch (Exception $e) {
+    echo 'Caught exception: ',  $e->getMessage(), "\n";
 }
 
-//
+////////////////////////////////////////////////////
 // Validate batch ID #
 // GET /mail/batch/{batch_id} #
 
-$batch_id = 'test_url_param';
+$batch_id = "test_url_param";
 
 try {
-	$response = $sg->client->mail()->batch()->_( $batch_id )->get();
-	print $response->statusCode() . "\n";
-	print_r( $response->headers() );
-	print $response->body() . "\n";
-} catch ( Exception $e ) {
-	echo 'Caught exception: ', $e->getMessage(), "\n";
+    $response = $sg->client->mail()->batch()->_($batch_id)->get();
+    print $response->statusCode() . "\n";
+    print_r($response->headers());
+    print $response->body() . "\n";
+} catch (Exception $e) {
+    echo 'Caught exception: ',  $e->getMessage(), "\n";
 }
 
-//
+////////////////////////////////////////////////////
 // v3 Mail Send #
 // POST /mail/send #
 // This endpoint has a helper, check it out [here](https://github.com/sendgrid/sendgrid-php/blob/HEAD/lib/mail/README.md).
 
-$request_body = json_decode(
-	'{
+$request_body = json_decode('{
   "asm": {
     "group_id": 1,
     "groups_to_display": [
@@ -187,14 +186,13 @@ $request_body = json_decode(
       "text": "If you would like to unsubscribe and stop receiving these emails <% click here %>."
     }
   }
-}'
-);
+}');
 
 try {
-	$response = $sg->client->mail()->send()->post( $request_body );
-	print $response->statusCode() . "\n";
-	print_r( $response->headers() );
-	print $response->body() . "\n";
-} catch ( Exception $e ) {
-	echo 'Caught exception: ', $e->getMessage(), "\n";
+    $response = $sg->client->mail()->send()->post($request_body);
+    print $response->statusCode() . "\n";
+    print_r($response->headers());
+    print $response->body() . "\n";
+} catch (Exception $e) {
+    echo 'Caught exception: ',  $e->getMessage(), "\n";
 }

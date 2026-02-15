@@ -2,25 +2,67 @@
 
 namespace EllipticCurve;
 
-class Signature {
+use EllipticCurve\Utils\Der;
+use EllipticCurve\Utils\Binary;
+use EllipticCurve\Utils\DerFieldType;
 
-	function __construct( $der ) {
-		$this->der = $der;
-	}
 
-	function toDer() {
-		return $this->der;
-	}
+class Signature
+{
+    public $r, $s;
+    public $recoveryId;
 
-	function toBase64() {
-		return base64_encode( $this->der );
-	}
+    function __construct($r, $s, $recoveryId=null)
+    {
+        $this->r = $r;
+        $this->s = $s;
+        $this->recoveryId = $recoveryId;
+    }
 
-	static function fromDer( $str ) {
-		return new Signature( $str );
-	}
+    function toDer($withRecoveryId=false)
+    {
+        $hexadecimal = $this->_toString();
+        $encodedSequence = Binary::byteStringFromHex($hexadecimal);
+        if (!$withRecoveryId)
+            return $encodedSequence;
+        return chr(27 + $this->recoveryId) . $encodedSequence;
+    }
 
-	static function fromBase64( $str ) {
-		return new Signature( base64_decode( $str ) );
-	}
+    function toBase64($withRecoveryId=false)
+    {
+        return Binary::base64FromByteString($this->toDer($withRecoveryId));
+    }
+
+    static function fromDer($string, $recoveryByte=false)
+    {
+        $recoveryId = null;
+        if ($recoveryByte) {
+            $recoveryId = is_int($string[0]) ? $string[0] : ord($string[0]);
+            $recoveryId -= 27;
+            $string = substr($string, 1);
+        }
+
+        $hexadecimal = Binary::hexFromByteString($string);
+        return Signature::_fromString($hexadecimal, $recoveryId);
+    }
+
+    static function fromBase64($string, $recoveryByte=false)
+    {
+        $der = Binary::byteStringFromBase64($string);
+        return Signature::fromDer($der, $recoveryByte);
+    }
+
+    function _toString()
+    {
+        return Der::encodeConstructed(
+            Der::encodePrimitive(DerFieldType::$integer, $this->r),
+            Der::encodePrimitive(DerFieldType::$integer, $this->s)
+        );
+    }
+
+    static function _fromString($string, $recoveryId=null)
+    {
+        list($r, $s) = Der::parse($string)[0];
+        return new Signature($r, $s, $recoveryId);
+    }
 }
