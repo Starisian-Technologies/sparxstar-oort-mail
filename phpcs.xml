@@ -11,6 +11,7 @@
     <exclude-pattern>/node_modules/</exclude-pattern>
     <!-- Exclude built assets if any -->
     <exclude-pattern>/build/</exclude-pattern>
+    <exclude-pattern>/tests/bootstrap.php</exclude-pattern>
 
     <!-- Ignore filename class convention for main runtime file -->
     <rule ref="WordPress.Files.FileName">

@@ -217,9 +217,12 @@ final class SendGrid {
 	public static bool $throw_on_send = false;
 
 	public function __construct(
-		private readonly string $api_key,
-		private readonly array $options = []
+		string $api_key,
+		array $options = []
 	) {
+		if ( '' === $api_key && [] === $options ) {
+			return;
+		}
 	}
 
 	public function send( \SendGrid\Mail\Mail $email ): SendGridResponseStub {

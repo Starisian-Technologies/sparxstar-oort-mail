@@ -1,10 +1,24 @@
 <?php
+/**
+ * PHPUnit coverage for SparxstarSendGridRuntime.
+ *
+ * @package Starisian\Sparxstar\SendGrid
+ */
+
 declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Starisian\Sparxstar\SendGrid\SparxstarSendGridRuntime;
 
+/**
+ * PHPUnit coverage for the SendGrid runtime transport.
+ */
 final class SparxstarSendGridRuntimeTest extends TestCase {
+	/**
+	 * Reset shared test doubles before each assertion.
+	 *
+	 * @return void
+	 */
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -14,13 +28,18 @@ final class SparxstarSendGridRuntimeTest extends TestCase {
 		$GLOBALS['sparxstar_test_environment_type'] = 'development';
 		$GLOBALS['sparxstar_test_wrong_calls']      = [];
 
-		SendGrid::$last_email   = null;
-		SendGrid::$status_code  = 202;
+		SendGrid::$last_email    = null;
+		SendGrid::$status_code   = 202;
 		SendGrid::$throw_on_send = false;
 
 		$this->setPrivateStaticProperty( 'api_key', 'test-api-key' );
 	}
 
+	/**
+	 * Verify header parsing accepts comma-delimited CC/BCC lines.
+	 *
+	 * @return void
+	 */
 	public function test_parse_headers_supports_comma_delimited_cc_and_bcc(): void {
 		$headers = implode(
 			"\r\n",
@@ -49,6 +68,11 @@ final class SparxstarSendGridRuntimeTest extends TestCase {
 		self::assertSame( 'text/plain', $parsed_headers['content_type'] );
 	}
 
+	/**
+	 * Verify sender-domain checks require an exact domain or subdomain boundary.
+	 *
+	 * @return void
+	 */
 	public function test_is_safe_sender_requires_exact_domain_boundary(): void {
 		self::assertTrue(
 			$this->invokePrivateStaticMethod( 'sparx_sendgrid_is_safe_sender', 'sender@star.com', 'star.com' )
@@ -61,6 +85,11 @@ final class SparxstarSendGridRuntimeTest extends TestCase {
 		);
 	}
 
+	/**
+	 * Verify domain resolution handles standard and ccTLD hosts.
+	 *
+	 * @return void
+	 */
 	public function test_resolve_domain_handles_standard_and_cc_tld_hosts(): void {
 		$GLOBALS['sparxstar_test_home_url'] = 'https://mail.service.co.uk';
 		self::assertSame( 'service.co.uk', $this->invokePrivateStaticMethod( 'sparx_sendgrid_resolve_domain' ) );
@@ -69,15 +98,23 @@ final class SparxstarSendGridRuntimeTest extends TestCase {
 		self::assertSame( 'example.com', $this->invokePrivateStaticMethod( 'sparx_sendgrid_resolve_domain' ) );
 	}
 
+	/**
+	 * Verify oversized attachments are skipped before the SendGrid request is built.
+	 *
+	 * @return void
+	 */
 	public function test_send_skips_oversized_attachments(): void {
 		$attachment_path = tempnam( sys_get_temp_dir(), 'spx' );
 		self::assertNotFalse( $attachment_path );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
 		$handle = fopen( $attachment_path, 'wb' );
 		self::assertNotFalse( $handle );
 
 		fseek( $handle, ( 25 * 1024 * 1024 ) + 1 );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
 		fwrite( $handle, 'A' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 		fclose( $handle );
 
 		try {
@@ -98,12 +135,16 @@ final class SparxstarSendGridRuntimeTest extends TestCase {
 			self::assertNotNull( SendGrid::$last_email );
 			self::assertCount( 0, SendGrid::$last_email->attachments );
 		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
 			unlink( $attachment_path );
 		}
 	}
 
 	/**
-	 * @param mixed ...$args Private method arguments.
+	 * Invoke a private static runtime method.
+	 *
+	 * @param string $method_name Private method name.
+	 * @param mixed  ...$args     Private method arguments.
 	 * @return mixed
 	 */
 	private function invokePrivateStaticMethod( string $method_name, mixed ...$args ): mixed {
@@ -113,6 +154,13 @@ final class SparxstarSendGridRuntimeTest extends TestCase {
 		return $reflection->invokeArgs( null, $args );
 	}
 
+	/**
+	 * Set a private static property on the runtime.
+	 *
+	 * @param string $property_name Private property name.
+	 * @param mixed  $value         Property value.
+	 * @return void
+	 */
 	private function setPrivateStaticProperty( string $property_name, mixed $value ): void {
 		$reflection = new ReflectionProperty( SparxstarSendGridRuntime::class, $property_name );
 		$reflection->setAccessible( true );
