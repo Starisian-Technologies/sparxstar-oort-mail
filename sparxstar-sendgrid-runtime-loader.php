@@ -21,7 +21,7 @@
  *
  * @package   Starisian\Sparxstar\SendGrid
  * @author    Starisian Technologies (Max Barrett) <support@starisian.com>
- * @license   MIT
+ * @license   Proprietary
  * @copyright Copyright (c) 2025–2026 Starisian Technologies
  *
  * @wordpress-muplugin
@@ -32,7 +32,7 @@
  * Requires at least:   6.8
  * Author:              Starisian Technologies (Max Barrett) <support@starisian.com>
  * Author URI:          https://starisian.com
- * License: MIT
+ * License: Proprietary
  * Plugin URI:          https://github.com/Starisian-Technologies/sparxstar-sendgrid-runtime
  * Text Domain:         sparxstar-sendgrid-runtime
  * Domain Path:         /languages
@@ -62,7 +62,7 @@ if ( file_exists( __DIR__ . '/sparxstar-sendgrid-runtime/SparxstarSendGridRuntim
 				<strong>SparxStar SendGrid Runtime Error:</strong>
 				The runtime plugin file was not found. Please ensure the directory
 				<code>sparxstar-sendgrid-runtime</code> exists internally and contains
-				<code>sparxstar-sendgrid-runtime.php</code>.
+				<code>SparxstarSendGridRuntime.php</code>.
 			</p>
 		</div>
 			<?php

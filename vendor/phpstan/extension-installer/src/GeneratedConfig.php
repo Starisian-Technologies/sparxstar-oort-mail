@@ -12,7 +12,7 @@ final class GeneratedConfig
 	public const EXTENSIONS = array (
   'phpstan/phpstan-deprecation-rules' => 
   array (
-    'install_path' => '/workspaces/sparxstar-sendgrid-mail/vendor/phpstan/phpstan-deprecation-rules',
+    'install_path' => '/home/runner/work/sparxstar-sendgrid-runtime/sparxstar-sendgrid-runtime/vendor/phpstan/phpstan-deprecation-rules',
     'relative_install_path' => '../../phpstan-deprecation-rules',
     'extra' => 
     array (
@@ -26,7 +26,7 @@ final class GeneratedConfig
   ),
   'phpstan/phpstan-phpunit' => 
   array (
-    'install_path' => '/workspaces/sparxstar-sendgrid-mail/vendor/phpstan/phpstan-phpunit',
+    'install_path' => '/home/runner/work/sparxstar-sendgrid-runtime/sparxstar-sendgrid-runtime/vendor/phpstan/phpstan-phpunit',
     'relative_install_path' => '../../phpstan-phpunit',
     'extra' => 
     array (
@@ -41,7 +41,7 @@ final class GeneratedConfig
   ),
   'phpstan/phpstan-strict-rules' => 
   array (
-    'install_path' => '/workspaces/sparxstar-sendgrid-mail/vendor/phpstan/phpstan-strict-rules',
+    'install_path' => '/home/runner/work/sparxstar-sendgrid-runtime/sparxstar-sendgrid-runtime/vendor/phpstan/phpstan-strict-rules',
     'relative_install_path' => '../../phpstan-strict-rules',
     'extra' => 
     array (
@@ -55,7 +55,7 @@ final class GeneratedConfig
   ),
   'swissspidy/phpstan-no-private' => 
   array (
-    'install_path' => '/workspaces/sparxstar-sendgrid-mail/vendor/swissspidy/phpstan-no-private',
+    'install_path' => '/home/runner/work/sparxstar-sendgrid-runtime/sparxstar-sendgrid-runtime/vendor/swissspidy/phpstan-no-private',
     'relative_install_path' => '../../../swissspidy/phpstan-no-private',
     'extra' => 
     array (
@@ -69,7 +69,7 @@ final class GeneratedConfig
   ),
   'szepeviktor/phpstan-wordpress' => 
   array (
-    'install_path' => '/workspaces/sparxstar-sendgrid-mail/vendor/szepeviktor/phpstan-wordpress',
+    'install_path' => '/home/runner/work/sparxstar-sendgrid-runtime/sparxstar-sendgrid-runtime/vendor/szepeviktor/phpstan-wordpress',
     'relative_install_path' => '../../../szepeviktor/phpstan-wordpress',
     'extra' => 
     array (

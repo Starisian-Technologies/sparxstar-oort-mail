@@ -223,6 +223,7 @@ This project adheres to strict coding standards (WordPress Extra + PSR compatibl
 - **Lint Code**: `composer run lint`
 - **Auto-fix Code**: `composer run fix` (Fixes indentation, spacing, array syntax)
 - **Static Analysis**: `composer run analyze` (PHPStan)
+- **Run Tests**: `composer run test` (PHPUnit)
 
 The codebase is strictly typed and verified against PHP 8.2+ compatibility.
 

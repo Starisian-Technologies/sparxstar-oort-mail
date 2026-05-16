@@ -4,7 +4,7 @@
  * Description: A shared SendGrid-backed mail transport for the SparxStar multisite ecosystem.
  * Version: 0.8.0
  * Author: Starisian Technologies (Max Barrett)
- * License: MIT
+ * License: Proprietary
  * Text Domain: sparxstar-sendgrid
  *
  * This file:
@@ -52,7 +52,6 @@ use function add_menu_page;
 use function explode;
 use function count;
 use function str_ends_with;
-use function wp_doing_it_wrong;
 
 // Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -190,7 +189,7 @@ final class SparxstarSendGridRuntime {
 	 * @param array $atts         wp_mail arguments.
 	 * @return bool|null
 	 */
-	public static function sparx_sendgrid_intercept( $return_value, array $atts ): bool|null {
+	public static function sparx_sendgrid_intercept( mixed $return_value, array $atts ): bool|null {
 		$to      = $atts['to'] ?? null;
 		$subject = $atts['subject'] ?? null;
 		$message = $atts['message'] ?? null;
@@ -204,7 +203,7 @@ final class SparxstarSendGridRuntime {
 			$recipients,
 			static fn( $email ) => is_email( $email )
 		);
-		// If no valid recipients, skip sending.
+		// Return null to allow WordPress default mailer to handle this.
 		if ( [] === $recipients ) {
 			return null;
 		}
@@ -437,7 +436,7 @@ final class SparxstarSendGridRuntime {
 	 * @return array{from: array{email:string, name:string}, reply_to: array|null,
 	 * cc: array, bcc: array, content_type: string}
 	 */
-	private static function sparx_sendgrid_parse_headers( $headers = [] ): array {
+	private static function sparx_sendgrid_parse_headers( string|array $headers = [] ): array {
 		// 1. Establish Default From (Sparxstar Logic)
 		$domain     = self::sparx_sendgrid_resolve_domain();
 		$from_email = apply_filters( 'sparxstar_sendgrid/from_email', 'support@' . $domain );
@@ -475,37 +474,34 @@ final class SparxstarSendGridRuntime {
 					continue;
 				}
 
-				// Extract email/name: "Name <email>" or "email".
-				$name_extracted  = '';
-				$email_extracted = $val;
+				$header_values = [ $val ];
 
-				if ( preg_match( '/(.*)<(.+)>/', $val, $matches ) ) {
-					$name_extracted  = trim( $matches[1] );
-					$email_extracted = trim( $matches[2] );
+				// CC/BCC may arrive as a single comma-delimited header line: "CC: a@example.com, b@example.com".
+				if ( in_array( $key, [ 'cc', 'bcc' ], true ) ) {
+					$header_values = explode( ',', $val );
 				}
 
-				if ( ! is_email( $email_extracted ) ) {
-					continue;
-				}
+				foreach ( $header_values as $header_value ) {
+					$addr = self::sparx_sendgrid_parse_header_address( trim( $header_value ) );
 
-				$addr = [
-					'email' => $email_extracted,
-					'name'  => $name_extracted,
-				];
+					if ( null === $addr ) {
+						continue;
+					}
 
-				switch ( $key ) {
-					case 'from':
-						$parsed['from'] = $addr;
-						break;
-					case 'reply-to':
-						$parsed['reply_to'] = $addr;
-						break;
-					case 'cc':
-						$parsed['cc'][] = $email_extracted;
-						break;
-					case 'bcc':
-						$parsed['bcc'][] = $email_extracted;
-						break;
+					switch ( $key ) {
+						case 'from':
+							$parsed['from'] = $addr;
+							break;
+						case 'reply-to':
+							$parsed['reply_to'] = $addr;
+							break;
+						case 'cc':
+							$parsed['cc'][] = $addr['email'];
+							break;
+						case 'bcc':
+							$parsed['bcc'][] = $addr['email'];
+							break;
+					}
 				}
 			}
 		}
@@ -535,6 +531,31 @@ final class SparxstarSendGridRuntime {
 	}
 
 	/**
+	 * Parse a single address header value.
+	 *
+	 * @param string $value Header value in "email" or "Name <email>" format.
+	 * @return array{email: string, name: string}|null
+	 */
+	private static function sparx_sendgrid_parse_header_address( string $value ): ?array {
+		$name_extracted  = '';
+		$email_extracted = $value;
+
+		if ( preg_match( '/(.*)<(.+)>/', $value, $matches ) ) {
+			$name_extracted  = trim( $matches[1] );
+			$email_extracted = trim( $matches[2] );
+		}
+
+		if ( ! is_email( $email_extracted ) ) {
+			return null;
+		}
+
+		return [
+			'email' => $email_extracted,
+			'name'  => $name_extracted,
+		];
+	}
+
+	/**
 	 * Check if email belongs to authorized infrastructure.
 	 *
 	 * @param string $email       Email address to check.
@@ -551,9 +572,11 @@ final class SparxstarSendGridRuntime {
 		$parts        = explode( '@', $email );
 		$email_domain = array_pop( $parts );
 
-		// 3. Strict Check: Email domain must end with safe domain
-		// This allows 'support@sparxstar.com' and 'sub@site.sparxstar.com'
-		return str_ends_with( strtolower( $email_domain ), strtolower( $safe_domain ) );
+		$email_domain = strtolower( $email_domain );
+		$safe_domain  = strtolower( $safe_domain );
+
+		// 3. Strict Check: Email domain must exactly match the safe domain or be a subdomain of it.
+		return $email_domain === $safe_domain || str_ends_with( $email_domain, '.' . $safe_domain );
 	}
 
 
@@ -585,10 +608,10 @@ final class SparxstarSendGridRuntime {
 			return;
 		}
 
-		$api_key = self::$api_key;
-		$domain  = self::sparx_sendgrid_resolve_domain();
-		$status  = ( '' !== $api_key ) ? 'API Key Detected' : 'API Key Missing';
-		$version = self::VERSION;
+		$has_api_key = '' !== self::$api_key;
+		$domain      = self::sparx_sendgrid_resolve_domain();
+		$status      = $has_api_key ? 'API Key Detected' : 'API Key Missing';
+		$version     = self::VERSION;
 		?>
 		<div class="wrap">
 			<h1>SPARXSTAR SendGrid Mail Runtime v<?php echo esc_html( $version ); ?></h1>
@@ -634,10 +657,6 @@ final class SparxstarSendGridRuntime {
 	 * Writes error to log file.
 	 *
 	 * @internal
-	/**
-	 * Writes error to log file.
-	 *
-	 * @internal
 	 * @param string $level   Log level (WARN, ERROR).
 	 * @param string $message Log message content.
 	 * @return void
@@ -658,7 +677,7 @@ final class SparxstarSendGridRuntime {
 	 */
 	public function __clone(): void {
 		// Prevent cloning of the singleton instance.
-		wp_doing_it_wrong( __METHOD__, 'Cloning is not allowed for this class.', '0.8.0' );
+		\wp_doing_it_wrong( __METHOD__, 'Cloning is not allowed for this class.', '0.8.0' );
 	}
 
 	/**
@@ -666,7 +685,7 @@ final class SparxstarSendGridRuntime {
 	 */
 	public function __wakeup(): void {
 		// Prevent unserialization of the singleton instance.
-		wp_doing_it_wrong( __METHOD__, 'Unserialization is not allowed for this class.', '0.8.0' );
+		\wp_doing_it_wrong( __METHOD__, 'Unserialization is not allowed for this class.', '0.8.0' );
 	}
 
 	/**
@@ -676,7 +695,7 @@ final class SparxstarSendGridRuntime {
 	 */
 	public function __sleep(): array {
 		// Prevent serialization of the singleton instance.
-		wp_doing_it_wrong( __METHOD__, 'Serialization is not allowed for this class.', '0.8.0' );
+		\wp_doing_it_wrong( __METHOD__, 'Serialization is not allowed for this class.', '0.8.0' );
 		return [];
 	}
 
@@ -686,7 +705,7 @@ final class SparxstarSendGridRuntime {
 	 * @return array
 	 */
 	public function __serialize(): array {
-		wp_doing_it_wrong( __METHOD__, 'Serialization is not allowed for this class.', '0.8.0' );
+		\wp_doing_it_wrong( __METHOD__, 'Serialization is not allowed for this class.', '0.8.0' );
 		return [];
 	}
 
@@ -696,6 +715,6 @@ final class SparxstarSendGridRuntime {
 	 * @param array $data Serialized data.
 	 */
 	public function __unserialize( array $data ): void {
-		wp_doing_it_wrong( __METHOD__, 'Unserialization is not allowed for this class.', '0.8.0' );
+		\wp_doing_it_wrong( __METHOD__, 'Unserialization is not allowed for this class.', '0.8.0' );
 	}
 }
