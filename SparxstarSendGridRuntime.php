@@ -4,7 +4,7 @@
  * Description: A shared SendGrid-backed mail transport for the SparxStar multisite ecosystem.
  * Version: 0.8.0
  * Author: Starisian Technologies (Max Barrett)
- * License: MIT
+ * License: Proprietary
  * Text Domain: sparxstar-sendgrid
  *
  * This file:
@@ -630,10 +630,6 @@ final class SparxstarSendGridRuntime {
 			}
 		);
 	}
-	/**
-	 * Writes error to log file.
-	 *
-	 * @internal
 	/**
 	 * Writes error to log file.
 	 *
